@@ -18,7 +18,7 @@ Route::get('/', '\\'.\App\Http\Controllers\CallbackController::class.'@linkGener
 Route::get('/callback', '\\'.\App\Http\Controllers\CallbackController::class.'@callback');
 
 Route::get('/member', function (){
-    dd(request()->user()->getAttributes());
+    dd(request()->user());
 });
 
 Route::get('/logout', function (){
