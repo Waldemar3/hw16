@@ -29,7 +29,7 @@ class CallbackController
 
     public function callback()
     {
-        $response = $this->discordRequest('https://discord.com/api/oauth2/token', [
+        $response = Http::asForm()->post('https://discord.com/api/oauth2/token', [
             'client_id' => env('OAUTH_DISCORD_CLIENT_ID'),
             'client_secret' => env('OAUTH_DISCORD_CLIENT_SECRET'),
             "grant_type" => "authorization_code",
@@ -37,14 +37,14 @@ class CallbackController
             'redirect_uri' => env('OAUTH_DISCORD_CALLBACK_URI'),
         ]);
 
-        $userInfo = $this->discordRequest('https://discord.com/api/users/@me', [
-            'token' => $response->access_token,
-        ]);
+        $userInfo = Http::withHeaders([
+            'Authorization' => 'Bearer '.$response['access_token']
+        ])->get('https://discord.com/api/users/@me');
 
-        if(($user = User::where('email', $userInfo->email)->first()) === null){
+        if(($user = User::where('email', $userInfo['email'])->first()) === null){
             $user = new User;
-            $user->name = $userInfo->username;
-            $user->email = $userInfo->email;
+            $user->name = $userInfo['username'];
+            $user->email = $userInfo['email'];
             $user->email_verified_at = now();
             $user->password = Hash::make(Str::random(100));
             $user->remember_token = Str::random(10);
@@ -54,25 +54,5 @@ class CallbackController
         Auth::login($user);
 
         return redirect('/member');
-    }
-
-    private function discordRequest($url, $post) {
-
-        $ch = curl_init($url);
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        if(!isset($post['token'])){
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
-        }else{
-            $headers[] = 'Authorization: Bearer '.$post['token'];
-        }
-
-        $headers[] = 'Accept: application/json';
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $response = curl_exec($ch);
-        return json_decode($response);
     }
 }
